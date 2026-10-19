@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ctf-postgres
+    environment:
+      POSTGRES_USER: ctf
+      POSTGRES_PASSWORD: ctf_db_password_change_me
+      POSTGRES_DB: ctf
+    volumes:
+      - ctf-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ctf -d ctf"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  ctf:
+    build: .
+    image: ctf-platform
+    container_name: ctf-platform
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"          # visit http://<host-ip>:3000
+    environment:
+      # CHANGE THESE before a real event.
+      DATABASE_URL: "postgres://ctf:ctf_db_password_change_me@db:5432/ctf"
+      SESSION_SECRET: "change-me-to-a-long-random-string"  # signs session cookies
+      ADMIN_PASSWORD: "change-me-admin-password"           # organiser login at /admin
+      # Optional: set the event name/tagline here, or edit them in the admin panel.
+      EVENT_NAME: "Capture The Flag"
+      EVENT_TAGLINE: "Register a team, solve challenges, climb the board."
+    restart: unless-stopped
+
+volumes:
+  ctf-db:

@@ -1,0 +1,29 @@
+{
+  "event": {
+    "name": "Capture The Flag",
+    "tagline": "Register a team, solve challenges, submit flags, climb the board."
+  },
+  "challenges": [
+    {
+      "id": "welcome",
+      "title": "Welcome",
+      "category": "Starter",
+      "points": 50,
+      "flag": "FLAG{welcome_to_the_ctf}",
+      "description": "A free flag to check your setup works. Submit it to get on the board.\n\nThe flag is: FLAG{welcome_to_the_ctf}",
+      "hints": ["It's written right there in the description."]
+    },
+    {
+      "id": "dynamic_example",
+      "title": "Dynamic Example",
+      "category": "Starter",
+      "scoring": "dynamic",
+      "initial": 500,
+      "minimum": 100,
+      "decay": 15,
+      "flag": "FLAG{points_go_down_as_teams_solve}",
+      "description": "An example of a dynamic challenge: it's worth a lot now and drops toward its minimum as more teams solve it.\n\nThe flag is: FLAG{points_go_down_as_teams_solve}",
+      "hints": ["Also written in the description — this entry just shows the format."]
+    }
+  ]
+}
