@@ -3,12 +3,13 @@ import { useState, useEffect, type FormEvent } from "react";
 import type { ChallengeView, SubmitResult } from "./types";
 
 type Props = {
+  slug: string;
   challenge: ChallengeView;
   onClose: () => void;
   onSolved: () => void;
 };
 
-export default function ChallengeModal({ challenge, onClose, onSolved }: Props) {
+export default function ChallengeModal({ slug, challenge, onClose, onSolved }: Props) {
   const [flag, setFlag] = useState("");
   const [result, setResult] = useState<SubmitResult | null>(null);
   const [busy, setBusy] = useState(false);
@@ -28,7 +29,7 @@ export default function ChallengeModal({ challenge, onClose, onSolved }: Props) 
     setBusy(true);
     setResult(null);
     try {
-      const r = await fetch("/api/submit", {
+      const r = await fetch(`/api/ctf/${slug}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ challengeId: challenge.id, flag }),

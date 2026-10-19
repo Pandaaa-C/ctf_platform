@@ -23,15 +23,12 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "3000:3000"          # visit http://<host-ip>:3000
+      - "3000:3000"
     environment:
-      # CHANGE THESE before a real event.
       DATABASE_URL: "postgres://ctf:ctf_db_password_change_me@db:5432/ctf"
-      SESSION_SECRET: "change-me-to-a-long-random-string"  # signs session cookies
-      ADMIN_PASSWORD: "change-me-admin-password"           # organiser login at /admin
-      # Optional: set the event name/tagline here, or edit them in the admin panel.
-      EVENT_NAME: "Capture The Flag"
-      EVENT_TAGLINE: "Register a team, solve challenges, climb the board."
+      SESSION_SECRET: "change-me-to-a-long-random-string"
+      ADMIN_USERNAME: "admin"
+      ADMIN_PASSWORD: "change-me-admin-password"
     restart: unless-stopped
 
 volumes:

@@ -28,9 +28,7 @@ export default function ScoreGraph({ series }: { series: SeriesLine[] }) {
 
     const lines = series.map((s, i) => {
       const pts = [{ t: s.line[0].t, score: 0 }, ...s.line];
-      const d = pts
-        .map((p, j) => `${j === 0 ? "M" : "L"} ${x(p.t).toFixed(1)} ${y(p.score).toFixed(1)}`)
-        .join(" ");
+      const d = pts.map((p, j) => `${j === 0 ? "M" : "L"} ${x(p.t).toFixed(1)} ${y(p.score).toFixed(1)}`).join(" ");
       return { d, color: COLORS[i % COLORS.length], name: s.name, last: pts[pts.length - 1], x, y };
     });
 

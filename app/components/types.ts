@@ -1,5 +1,5 @@
 export type ChallengeView = {
-  id: string;
+  id: number;
   title: string;
   category: string;
   value: number;
@@ -34,8 +34,12 @@ export type Standing = { rank: number; name: string; score: number; solved: numb
 export type SeriesLine = { name: string; line: { t: number; score: number }[] };
 export type ScoreboardResponse = { frozen: boolean; standings: Standing[]; series: SeriesLine[] };
 
+export type CtfListItem = { slug: string; name: string; tagline: string; challenges: number; teams: number };
+
 export type AdminChallenge = {
-  id: string;
+  id: number;
+  ctfId: number;
+  slug: string;
   title: string;
   category: string;
   points: number;
@@ -47,6 +51,20 @@ export type AdminChallenge = {
   minimum: number | null;
   decay: number | null;
   solves: number;
+  canManage: boolean;
 };
 
 export type AdminTeam = { id: number; name: string; score: number; solved: number };
+
+export type AdminCtf = {
+  id: number;
+  slug: string;
+  name: string;
+  tagline: string;
+  frozen: boolean;
+  challenges: number;
+  teams: number;
+};
+
+export type Organiser = { id: number; username: string; role: string; scope: number[] };
+export type OrganiserChallenge = { id: number; title: string; ctf: string };

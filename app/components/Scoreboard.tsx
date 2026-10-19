@@ -3,14 +3,14 @@ import { useEffect, useState } from "react";
 import ScoreGraph from "./ScoreGraph";
 import type { ScoreboardResponse } from "./types";
 
-export default function Scoreboard() {
+export default function Scoreboard({ slug }: { slug: string }) {
   const [data, setData] = useState<ScoreboardResponse | null>(null);
   const [me, setMe] = useState<string | null>(null);
 
   async function load() {
     const [sb, meR] = await Promise.all([
-      fetch("/api/scoreboard", { cache: "no-store" }).then((r) => r.json()),
-      fetch("/api/me", { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
+      fetch(`/api/ctf/${slug}/scoreboard`, { cache: "no-store" }).then((r) => r.json()),
+      fetch(`/api/ctf/${slug}/me`, { cache: "no-store" }).then((r) => r.json()).catch(() => ({})),
     ]);
     setData(sb);
     setMe(meR?.team?.name || null);
@@ -20,11 +20,9 @@ export default function Scoreboard() {
     load();
     const t = setInterval(load, 15000);
     return () => clearInterval(t);
-  }, []);
+  }, [slug]);
 
-  if (!data) {
-    return <div className="wrap"><p className="empty">Loading scoreboard…</p></div>;
-  }
+  if (!data) return <div className="wrap"><p className="empty">Loading scoreboard…</p></div>;
 
   const hasTeams = data.standings.length > 0;
 

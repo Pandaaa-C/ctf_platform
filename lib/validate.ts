@@ -1,10 +1,7 @@
-import type { ChallengeInput } from "@/lib/data";
-
 export type ParsedChallenge = {
   error?: string;
-  status?: number;
   value?: {
-    id: string | null;
+    slug: string | null;
     title: string;
     category: string;
     flag: string;
@@ -33,8 +30,7 @@ function normaliseHints(h: unknown): string[] {
   return [];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function parseChallenge(body: any, needId: boolean): ParsedChallenge {
+export function parseChallenge(body: Record<string, unknown>, needSlug: boolean): ParsedChallenge {
   const title = String(body?.title ?? "").trim();
   const category = String(body?.category ?? "").trim() || "Misc";
   const flag = String(body?.flag ?? "").trim();
@@ -43,10 +39,10 @@ export function parseChallenge(body: any, needId: boolean): ParsedChallenge {
   if (!title) return { error: "Title is required." };
   if (!flag) return { error: "Flag is required." };
 
-  let id: string | null = null;
-  if (needId) {
-    id = slugify(body?.id || body?.title || "");
-    if (!id) return { error: "An id (or title to derive it) is required." };
+  let slug: string | null = null;
+  if (needSlug) {
+    slug = slugify(String(body?.slug || body?.title || ""));
+    if (!slug) return { error: "A slug (or title to derive it) is required." };
   }
 
   let points: number;
@@ -61,7 +57,7 @@ export function parseChallenge(body: any, needId: boolean): ParsedChallenge {
     if (!(initial > 0)) return { error: "Initial value must be a positive number." };
     if (!(minimum >= 0)) return { error: "Minimum value must be zero or more." };
     if (minimum > initial) return { error: "Minimum can't be greater than initial." };
-    if (!(decay >= 1)) return { error: "Decay (solves to reach minimum) must be at least 1." };
+    if (!(decay >= 1)) return { error: "Decay must be at least 1." };
     points = initial;
   } else {
     points = int(body?.points);
@@ -71,7 +67,7 @@ export function parseChallenge(body: any, needId: boolean): ParsedChallenge {
 
   return {
     value: {
-      id,
+      slug,
       title,
       category,
       flag,
@@ -85,5 +81,3 @@ export function parseChallenge(body: any, needId: boolean): ParsedChallenge {
     },
   };
 }
-
-export type { ChallengeInput };

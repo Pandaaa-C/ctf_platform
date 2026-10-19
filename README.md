@@ -1,270 +1,425 @@
 # CTF Platform
 
-A self-hosted, **CTFd-style** flag-submission platform and live scoreboard for
-running a Capture The Flag event — **any** event, not tied to one challenge set.
-Built with **Next.js + TypeScript**, **PostgreSQL**, and **Drizzle ORM**,
-packaged with **Docker Compose** (app + database) for one-command deployment.
+A self-hosted, **CTFd-style** flag-submission platform and live scoreboard that
+hosts **many Capture The Flag events at once**. Built with **Next.js +
+TypeScript**, **PostgreSQL**, and **Drizzle ORM**, packaged with **Docker
+Compose** (app + database) for one-command deployment.
 
-Everything — team accounts (authentication), challenges, solves, and event
-settings — lives in Postgres. There's no file-based state at runtime; the bundled
-`data/challenges.json` is only an optional first-boot seed.
+Everything lives in Postgres: CTF events, challenges, per-event team accounts,
+solves, and organiser accounts. The homepage lists the events; each event lives
+at `/ctf/<slug>` with its own challenges, registration and scoreboard.
 
-It's a single standalone project: one app, one database, the only scoring system
-you need to run. Out of the box it starts as a generic, unbranded event with a
-couple of sample challenges. You set the event name, add your own challenges, and
-run it — then wipe it and run a completely different CTF next time, all from the
-admin panel. No code changes, no redeploy.
+## Features
 
-A ready-made example challenge pack (the "SecureCrypt" web + reverse-engineering
-set) ships in `data/examples/` so you can load a full event in one click to try
-things out.
-
-## Features (the CTFd-style bits)
-
-- **Team register / log in** — hashed passwords (bcrypt), signed session cookies.
-- **Challenge board** — tiles grouped by category, showing points and solve
-  counts, with a solved ✓ and a 🩸 first-blood marker.
-- **Submit modal** — click a challenge to read its description, reveal hints
-  one at a time, and submit a flag. Right/wrong/duplicate all handled.
-- **Live scoreboard** — rankings plus a score-over-time line graph of the top
-  teams; auto-refreshes every 15 seconds.
-- **Admin panel** (`/admin`) — set the event name/tagline, add / edit / delete
-  challenges live, import a challenge pack as JSON, reset or delete teams, freeze
-  the scoreboard, and wipe everything to start a fresh event. Password-protected,
-  separate from team login.
-- **Static or dynamic scoring** per challenge (fixed points, or CTFd-style decay).
-- **Flags never reach the browser** — all checking is server-side. This platform
-  is *not* a vulnerable target; keep it separate from any challenge infra.
+- **Multiple CTFs** — create as many events as you like. Each has its own
+  challenges, teams, scoreboard and freeze state. Players pick an event from the
+  homepage.
+- **Per-event teams** — a team registers for a specific CTF (bcrypt-hashed
+  password). The same team name can exist in different events.
+- **Organiser accounts in the database** — not a shared password. Two access
+  levels:
+    - **Full admin** — manage every event, challenge, team and organiser.
+    - **Scoped organiser** — can only edit/delete the specific challenges they're
+      assigned; everything else is read-only or hidden.
+- **Challenge board** — tiles grouped by category with points, solve counts, a
+  solved ✓ and a 🩸 first-blood marker; a submit modal with staged hints.
+- **Static or dynamic scoring** per challenge (fixed points, or CTFd-style decay
+  as more teams solve).
+- **Live scoreboard** per event — rankings plus a score-over-time graph, with an
+  organiser-controlled freeze.
+- **Flags never reach the browser** — all checking is server-side.
 
 ## Run it with Docker Compose (recommended)
 
-Compose brings up **two** services: `db` (PostgreSQL 16) and `ctf` (the app).
-Database migrations run automatically when the app container starts.
+Compose brings up two services: `db` (PostgreSQL 16) and `ctf` (the app). On
+start the app runs database migrations and seeds the first admin account.
 
 ```bash
-# 1. set your secrets (edit SESSION_SECRET, ADMIN_PASSWORD, DB password)
-cp .env.example .env     # or edit the values directly in docker-compose.yml
-
-# 2. build and start both services
+cp .env.example .env     # set SESSION_SECRET, ADMIN_USERNAME, ADMIN_PASSWORD, DB password
 docker compose up --build
 ```
 
-Then open **http://<the-host's-ip>:3000** on the student machines.
+Open **http://<host-ip>:3000**. Sign in to the admin panel at **/admin** with the
+`ADMIN_USERNAME` / `ADMIN_PASSWORD` you configured, create a CTF, and add
+challenges to it.
 
-All data lives in the Postgres volume (`ctf-db`), so you can stop and restart
-without losing teams or scores. To wipe everything and start completely fresh:
+All data lives in the Postgres volume (`ctf-db`). To wipe everything:
 
 ```bash
-docker compose down -v        # the -v removes the DB volume (all data)
+docker compose down -v
 docker compose up --build
 ```
 
-## Run it without Docker (local dev)
+## Full installation guide
 
-Requires Node.js 20+ and a PostgreSQL database.
+The recommended way to run this on any server is Docker Compose — it brings up
+the app and the database together and survives reboots. The steps below are
+end-to-end for a fresh **Linux server** and a fresh **Windows Server**.
+
+You need: the project files on the server, Docker with the Compose plugin, and
+an inbound firewall rule for the port you expose (3000 by default).
+
+### Before you start (both platforms)
+
+1. Get the project onto the server — either `git clone <your-repo>` or copy the
+   `ctfd-platform` folder across (SCP, RDP copy-paste, a USB drive, etc.).
+2. Create your `.env` from the template and change every secret:
+
+   ```
+   DATABASE_URL=postgres://ctf:A_STRONG_DB_PASSWORD@db:5432/ctf
+   SESSION_SECRET=a_long_random_string
+   ADMIN_USERNAME=admin
+   ADMIN_PASSWORD=a_strong_admin_password
+   ```
+
+   Make the DB password in `DATABASE_URL` match the one in
+   `docker-compose.yml` (the `POSTGRES_PASSWORD` of the `db` service), or set
+   both from the same value. Generate a good `SESSION_SECRET` with
+   `openssl rand -hex 32` (Linux/WSL) or any long random string.
+
+---
+
+### Linux server (Ubuntu / Debian)
+
+Tested on Ubuntu 22.04/24.04 and Debian 12. Run as a user with `sudo`.
+
+**1. Install Docker Engine + Compose plugin**
 
 ```bash
+sudo apt-get update
+sudo apt-get install -y ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+On Debian, replace `ubuntu` with `debian` in both URLs above.
+
+Let your user run Docker without `sudo` (log out/in afterwards, or run `newgrp docker`):
+
+```bash
+sudo usermod -aG docker "$USER"
+```
+
+Enable Docker on boot:
+
+```bash
+sudo systemctl enable --now docker
+```
+
+**2. Build and start the platform**
+
+```bash
+cd ctfd-platform
+cp .env.example .env
+nano .env                      # set your secrets (see "Before you start")
+docker compose up --build -d   # -d runs it in the background
+```
+
+Check it's up:
+
+```bash
+docker compose ps
+docker compose logs -f ctf     # watch startup: migrate -> seed -> Ready
+```
+
+**3. Open the firewall** (if `ufw` is enabled)
+
+```bash
+sudo ufw allow 3000/tcp
+```
+
+**4. Use it** — browse to `http://<server-ip>:3000`, sign in at `/admin`.
+
+**Managing it**
+
+```bash
+docker compose restart ctf     # restart just the app
+docker compose down            # stop (keeps data)
+docker compose down -v         # stop and delete all data
+docker compose pull && docker compose up --build -d   # update after code changes
+```
+
+Because the services use `restart: unless-stopped`, they come back automatically
+after a server reboot once the Docker service is enabled.
+
+**Optional: serve on port 80/443 behind Nginx**
+
+Keep the app on 3000 and put a reverse proxy in front for a domain name and TLS.
+Install Nginx (`sudo apt-get install -y nginx`) and add a site:
+
+```nginx
+server {
+    listen 80;
+    server_name ctf.example.edu;
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Then `sudo ln -s` it into `sites-enabled`, `sudo nginx -t`, `sudo systemctl reload nginx`,
+and add HTTPS with `sudo apt-get install -y certbot python3-certbot-nginx && sudo certbot --nginx`.
+
+---
+
+### Windows Server
+
+Tested on Windows Server 2022. Two supported routes — **Docker (recommended)**
+or **running Node directly**.
+
+#### Option A — Docker Desktop (recommended)
+
+**1. Enable the required Windows features** (PowerShell as Administrator), then reboot:
+
+```powershell
+Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux -All -NoRestart
+Enable-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -All -NoRestart
+wsl --install --no-distribution
+Restart-Computer
+```
+
+**2. Install Docker Desktop**
+
+Download Docker Desktop for Windows from docker.com and run the installer,
+keeping the **WSL 2 based engine** option. Launch Docker Desktop once so the
+engine starts, and in **Settings → General** enable **Start Docker Desktop when
+you log in** so it survives reboots. Confirm it works in PowerShell:
+
+```powershell
+docker version
+docker compose version
+```
+
+**3. Build and start the platform**
+
+```powershell
+cd C:\path\to\ctfd-platform
+Copy-Item .env.example .env
+notepad .env                     # set your secrets (see "Before you start")
+docker compose up --build -d
+docker compose logs -f ctf       # Ctrl+C stops watching, not the app
+```
+
+**4. Open the firewall**
+
+```powershell
+New-NetFirewallRule -DisplayName "CTF Platform" -Direction Inbound -Protocol TCP -LocalPort 3000 -Action Allow
+```
+
+**5. Use it** — browse to `http://<server-ip>:3000`, sign in at `/admin`.
+
+> On Windows Server, Docker Desktop requires a logged-in session to keep the
+> engine running. For an always-on headless host, either keep an admin session
+> signed in, or use **Option B** below (Node as a Windows service), or install
+> the Docker Engine under WSL and run it there.
+
+#### Option B — Node.js + Postgres directly (no Docker)
+
+**1. Install prerequisites**
+
+- **Node.js 20 LTS** — download the Windows MSI from nodejs.org and install.
+- **PostgreSQL 16** — download the EDB installer from postgresql.org, install,
+  and note the `postgres` superuser password you set. Add PostgreSQL's `bin`
+  folder to `PATH` if you want `psql` on the command line.
+
+**2. Create the database** (in a PowerShell/`psql` session):
+
+```sql
+CREATE
+DATABASE ctf;
+CREATE
+USER ctf WITH PASSWORD 'A_STRONG_DB_PASSWORD';
+GRANT ALL PRIVILEGES ON DATABASE
+ctf TO ctf;
+```
+
+**3. Configure and build**
+
+```powershell
+cd C:\path\to\ctfd-platform
+Copy-Item .env.example .env
+notepad .env     # set DATABASE_URL=postgres://ctf:A_STRONG_DB_PASSWORD@localhost:5432/ctf and the secrets
 npm install
-
-# point at your Postgres (see .env.example)
-export DATABASE_URL="postgres://user:pass@localhost:5432/ctf"
-
-npm run db:migrate   # create the tables
-npm run dev          # http://localhost:3000  (dev, hot reload)
-# or, production:
-npm run build && npm start
+npm run db:setup     # migrate + seed the admin
+npm run build
 ```
 
-Useful scripts: `npm run typecheck` (tsc), `npm run db:generate` (regenerate
-migration SQL after editing `db/schema.ts`), `npm run db:migrate` (apply
-migrations).
+**4. Run it**
 
-## Running your own event (and reusing for many CTFs)
+```powershell
+npm run start        # serves on http://0.0.0.0:3000
+```
 
-This platform is event-agnostic. A typical lifecycle:
+To keep it running as a background Windows service, use a process manager such
+as [NSSM](https://nssm.cc): install the service to run `node` with the argument
+`node_modules\next\dist\bin\next start -p 3000 -H 0.0.0.0`, with the working
+directory set to the project folder and the environment variables from `.env`
+configured on the service. Then open the firewall as in Option A step 4.
 
-1. **Set the event identity.** In the admin panel → **Settings → Event details**,
-   set the name and tagline (or set `EVENT_NAME` / `EVENT_TAGLINE` in the
-   environment). The header logo mark is derived from the name automatically.
-2. **Add your challenges.** Either create them one by one in **Challenges**, or
-   paste a JSON pack in **Settings → Import challenges**. A pack is a JSON array
-   of challenge objects, or an object `{ "event": {...}, "challenges": [...] }`.
-3. **Run the event.** Teams register and submit; you freeze/unfreeze the board.
-4. **Reset for the next CTF.** In **Settings → Danger zone**, delete all teams
-   and all challenges, then set the new event name and import the next pack. The
-   same running instance now hosts a completely different CTF.
+---
 
-To try the included example immediately, paste the contents of
-`data/examples/securecrypt-ctf.json` into the import box (tick "Replace existing
-set"), or copy it over `data/challenges.json` before first boot.
+### Updating to a new version (any server)
 
-## Admin panel
+```bash
+# Docker
+docker compose up --build -d          # rebuilds the app image; migrations run on start
 
-Go to **`/admin`** and log in with `ADMIN_PASSWORD`. Three tabs:
+# Bare Node
+git pull                              # or copy new files in
+npm install
+npm run db:migrate
+npm run build
+# restart your service / npm run start
+```
 
-- **Challenges** — add a new challenge, edit any field (title, category, points,
-  flag, description, hints) or delete one. Changes are live immediately for
-  every team. Deleting a challenge also removes its solves. Each challenge can
-  use **static** or **dynamic** scoring (see below).
-- **Teams** — see every team with their score and solve count. **Reset** zeroes
-  a team's solves (keeps the team); **Delete** removes the team entirely.
-- **Settings** — event stats, plus:
-  - **Event details** — set the event name and tagline shown across the site.
-  - **Freeze / Unfreeze the scoreboard.** Freezing locks the *public*
-    scoreboard at the current standings while teams keep solving. Unfreeze at the
-    end to reveal the final results — a classic CTF finish.
-  - **Import challenges** — paste a JSON pack (array, or `{event, challenges}`).
-    Merge into the current set, or tick "Replace existing set" to swap it out.
-    Also a one-click re-import of the bundled `data/challenges.json`.
-  - **Danger zone** — delete all teams, or delete all challenges, to reset the
-    instance for a new event.
+Migrations are additive and run automatically (Docker) or via `npm run db:migrate`
+(bare Node), so your events, teams and solves are preserved across updates.
 
-> **Challenges become database-managed after first run.** On the very first
-> boot the platform seeds challenges from `data/challenges.json`; after that,
-> the admin panel is the source of truth and your edits persist across
-> restarts. Editing the JSON later only takes effect if you hit **Re-import from
-> file** (or start with a fresh database).
+## Local development
 
-## Scoring: static or dynamic (optional)
+Only a Postgres database needs to run in Docker; the app runs on your machine.
 
-Every challenge is **static by default** — worth a fixed number of points. You
-can opt any individual challenge into **dynamic** scoring in the admin editor
-(or in `challenges.json`); nothing changes for the ones you leave static.
+```bash
+docker compose -f docker-compose.dev.yml up -d   # Postgres on localhost:5432
+npm install
+cp .env.example .env                              # DATABASE_URL already points at localhost
+npm run db:setup                                  # migrate + seed the admin
+npm run dev                                        # http://localhost:3000
+```
 
-**Dynamic** means the challenge is worth a lot while few teams have solved it and
-drops toward a floor as more do — rewarding early solvers. Every team that has
-solved it is always worth its *current* value, so standings shift as solves come
-in. Three numbers control it:
+Scripts: `npm run typecheck`, `npm run db:generate` (regenerate migration SQL
+after editing `db/schema.ts`), `npm run db:migrate`, `npm run db:seed`,
+`npm run db:setup` (migrate then seed).
 
-- **Initial** — value at zero solves.
-- **Minimum** — the floor it can't drop below.
-- **Decay** — roughly the number of solves at which it reaches the minimum.
+## The admin panel (`/admin`)
 
-The value follows the standard CTFd curve:
-`value = ((minimum − initial) / decay²) × solves² + initial`, clamped to the
-minimum. For example `initial 500, minimum 100, decay 10` gives: 500 → 496 (1
-solve) → 400 (5) → 100 (10+).
+Sign in with an organiser account. What you see depends on your access level.
 
-Dynamic challenges are tagged on the board and in the challenge view so teams
-know the points are dropping. In `challenges.json`, a dynamic entry looks like:
+**Full admin** gets four tabs:
+
+- **CTFs** — create an event (name + tagline → auto-generated `/ctf/<slug>`),
+  freeze/unfreeze its scoreboard, or delete it (removes its challenges, teams and
+  solves).
+- **Challenges** — pick an event, then add/edit/delete its challenges or bulk **import** a JSON pack. Each challenge is
+  static or dynamic.
+- **Teams** — pick an event; reset a team's solves or delete a team.
+- **Organisers** — add organiser accounts, set each to full or scoped, and for
+  scoped ones tick exactly which challenges they may manage. Reset passwords or
+  delete accounts.
+
+**Scoped organiser** sees a single **My challenges** tab: only the challenges
+they've been assigned, which they can edit and delete. They cannot create
+challenges, manage events/teams, or see other organisers.
+
+## Seeding the first admin
+
+`npm run db:seed` (and the Docker entrypoint) create one **full admin** from the
+environment, if it doesn't already exist:
+
+```
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=change-me-admin-password
+```
+
+It's idempotent — it never overwrites an existing account. Create further
+organisers from the Organisers tab.
+
+## Importing challenges
+
+In **Challenges → Import**, paste a JSON array of challenge objects (or an object
+with a `challenges` array) to bulk-add them to the selected event. Tick "Replace"
+to swap out that event's existing set. A ready-made example pack (a web +
+reverse-engineering set) is in `data/examples/securecrypt-ctf.json`.
+
+A challenge object:
 
 ```json
 {
-  "id": "fast_pwn",
-  "title": "Race to Pwn",
-  "category": "Pwn",
-  "scoring": "dynamic",
-  "initial": 500,
-  "minimum": 100,
-  "decay": 15,
-  "flag": "FLAG{...}",
-  "description": "First to pop the binary earns the most."
-}
-```
-
-Leave `scoring` out (or set `"static"`) and use `points` for a fixed-value
-challenge, exactly as before.
-
-## Editing the challenges (file-based)
-
-If you'd rather manage challenges as a file, edit **`data/challenges.json`**
-before first run (or re-import afterwards). Each entry:
-
-```json
-{
-  "id": "sqli_login",
-  "title": "Open Sesame",
-  "category": "Web",
+  "slug": "rot13",
+  "title": "ROT13",
+  "category": "Crypto",
   "points": 100,
-  "flag": "FLAG{sql_1nject1on_l0gs_y0u_1n}",
-  "description": "Make the login let you in without a password.",
-  "hints": ["What does a single quote ' do?", "Search: SQL injection login bypass."]
+  "flag": "FLAG{...}",
+  "description": "Decode it.",
+  "hints": [
+    "It's a Caesar cipher."
+  ]
 }
 ```
 
-- `id` is a stable key — don't reuse one. Editing other fields and restarting
-  updates the challenge **without wiping existing solves**.
-- `category` groups the tiles (e.g. Web, Recon, Reverse Engineering).
-- `flag` is checked exactly and case-sensitively. It's never sent to the client.
-- `hints` are optional; students reveal them one at a time in the modal.
-
-After editing, restart (`docker compose restart`, or re-run `npm start`).
-
-> The flags here match the SecureCrypt vulnerable site and the three ELF
-> reverse-engineering engines, so the two projects work together out of the box.
+For a dynamic challenge, set `"scoring": "dynamic"` with `initial`, `minimum` and
+`decay` instead of `points`. The value follows the CTFd curve
+`((minimum − initial) / decay²) × solves² + initial`, clamped to the minimum.
 
 ## Configuration
 
-| Env var | Default | Purpose |
-|---|---|---|
-| `DATABASE_URL` | — | Postgres connection string — **required** |
-| `SESSION_SECRET` | dev placeholder | Signs session cookies — **set this** for a real event |
-| `ADMIN_PASSWORD` | `changeme` | Password for the `/admin` panel — **set this** |
-| `EVENT_NAME` | `Capture The Flag` | Default event name (admin panel overrides it) |
-| `EVENT_TAGLINE` | — | Default tagline (admin panel overrides it) |
-| `PORT` | `3000` | Port the server listens on |
-
-Event name precedence: **admin panel setting → `EVENT_NAME` env → `data/challenges.json` → "Capture The Flag"**.
+| Env var          | Default         | Purpose                                            |
+|------------------|-----------------|----------------------------------------------------|
+| `DATABASE_URL`   | —               | Postgres connection string — **required**          |
+| `SESSION_SECRET` | dev placeholder | Signs session cookies — **set this**               |
+| `ADMIN_USERNAME` | `admin`         | Username for the seeded first admin                |
+| `ADMIN_PASSWORD` | `changeme`      | Password for the seeded first admin — **set this** |
+| `PORT`           | `3000`          | Port the server listens on                         |
 
 ## Project layout
 
 ```
 ctfd-platform/
-├─ app/                       Next.js App Router (TypeScript)
-│  ├─ page.tsx                landing
-│  ├─ register/ login/        auth pages
-│  ├─ challenges/             challenge board (client)
-│  ├─ scoreboard/             scoreboard + score graph (client)
-│  ├─ admin/                  admin panel + admin login (client)
-│  ├─ components/*.tsx        Nav, Board, ChallengeModal, Scoreboard, ScoreGraph,
-│  │                          AuthForm, Admin, ChallengeEditor, AdminLogin, types
+├─ app/
+│  ├─ page.tsx                landing: lists all CTFs
+│  ├─ ctf/[slug]/             per-event pages (challenges, scoreboard, register, login)
+│  ├─ admin/                  admin panel + sign in
+│  ├─ components/*.tsx        TopBar, CtfNav, Board, ChallengeModal, Scoreboard,
+│  │                          ScoreGraph, AuthForm, Admin, ChallengeEditor,
+│  │                          OrganiserEditor, AdminLogin, types
 │  └─ api/
-│     ├─ (team) register, login, logout, me, challenges, submit, scoreboard
-│     └─ admin/               login, logout, me, challenges[/id], teams[/id], settings
+│     ├─ ctfs                 public CTF list
+│     ├─ ctf/[slug]/          register, login, logout, me, challenges, submit, scoreboard
+│     └─ admin/               login, logout, me, ctfs[/id], challenges[/id],
+│                             teams[/id], organisers[/id]
 ├─ db/
-│  ├─ schema.ts               Drizzle schema (teams, challenges, solves, settings)
-│  └─ client.ts               pg Pool + Drizzle instance (singleton)
+│  ├─ schema.ts               ctfs, admins, admin_challenges, teams, challenges, solves
+│  └─ client.ts               pg Pool + Drizzle instance
 ├─ lib/
-│  ├─ data.ts                 settings, event meta, import/wipe, seed (async)
+│  ├─ auth.ts                 admin + per-event team sessions, scope checks
+│  ├─ ctfs.ts                 CTF CRUD + slugs
+│  ├─ challenges.ts           import/wipe per event
 │  ├─ scoring.ts              static + dynamic scoring engine
-│  ├─ auth.ts                 signed-cookie sessions (HMAC-SHA256)
 │  └─ validate.ts             challenge input validation
 ├─ drizzle/                   generated SQL migrations (run on startup)
 ├─ scripts/
-│  ├─ migrate.ts / migrate.mjs  migration runner (mjs is used in the container)
-│  └─ docker-entrypoint.sh      migrate → start server
-├─ data/challenges.json       optional first-boot seed (generic sample event)
-├─ data/examples/
-│  └─ securecrypt-ctf.json    web + reverse-engineering example pack to import
-├─ drizzle.config.ts          drizzle-kit config
-├─ tsconfig.json
-├─ Dockerfile                 multi-stage (Next standalone + migrations)
-├─ docker-compose.yml         app + Postgres, with a persistent DB volume
-└─ next.config.mjs
+│  ├─ migrate.ts / migrate.mjs   migration runner
+│  ├─ seed.ts / seed.mjs         first-admin seed
+│  └─ docker-entrypoint.sh       migrate → seed → start
+├─ data/examples/            importable challenge packs
+├─ Dockerfile
+├─ docker-compose.yml        app + Postgres (production)
+├─ docker-compose.dev.yml    Postgres only (local dev)
+└─ drizzle.config.ts
 ```
 
 ## Database schema
 
-Four tables, defined in `db/schema.ts` and migrated by Drizzle:
+Six tables (`db/schema.ts`), migrated by Drizzle:
 
-- **teams** — `id, name (unique), pass_hash (bcrypt), created_at` — the auth system.
-- **challenges** — `id, title, category, points, description, flag, hints (jsonb),
-  sort_order, scoring, initial, minimum, decay`.
+- **ctfs** — `id, slug (unique), name, tagline, frozen_at, created_at`.
+- **admins** — `id, username (unique), pass_hash, role ('full'|'scoped'), created_at`.
+- **admin_challenges** — `admin_id, challenge_id` — which challenges a scoped
+  organiser may manage.
+- **teams** — `id, ctf_id, name, pass_hash, created_at` — unique per (ctf, name).
+- **challenges** — `id, ctf_id, slug, title, category, points, description, flag,
+  hints, sort_order, scoring, initial, minimum, decay` — unique per (ctf, slug).
 - **solves** — `id, team_id, challenge_id, points, solved_at` — unique per (team, challenge).
-- **settings** — `key, value` — event name/tagline, scoreboard freeze, etc.
 
-To change the schema: edit `db/schema.ts`, run `npm run db:generate` to produce a
-new migration in `drizzle/`, and it's applied automatically on next startup.
+Change the schema by editing `db/schema.ts`, then `npm run db:generate` and the
+new migration applies on next startup.
 
-## Notes for a real event
-
-- **Change `SESSION_SECRET` and `ADMIN_PASSWORD`** before students arrive.
-- Run this on the **same machine or LAN** as the challenge target site. It
-  doesn't need to be internet-facing.
-- The `/admin` panel is unlinked from the student-facing nav — reach it by
-  typing the URL. Keep the admin password to yourself.
-- A good end-of-event flow: **freeze** the scoreboard ~15 minutes before the
-  end (so the last stretch is suspenseful), then **unfreeze** live in front of
-  everyone to reveal the winner.
-- The XSS challenge is "prove it to the instructor" style — its flag is awarded
-  by you, then the team submits it here like any other.
+> This platform is for scoring and submission. Keep it separate from any
+> deliberately vulnerable challenge infrastructure.

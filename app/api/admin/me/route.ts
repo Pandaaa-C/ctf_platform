@@ -1,7 +1,10 @@
-import { isAdmin } from "@/lib/auth";
+import { getCurrentAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return Response.json({ admin: await isAdmin() });
+  const admin = await getCurrentAdmin();
+  return Response.json({
+    admin: admin ? { username: admin.username, role: admin.role } : null,
+  });
 }

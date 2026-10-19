@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { challenges, solves } from "@/db/schema";
-import { requireAdmin } from "@/lib/auth";
+import { challenges, solves, adminChallenges } from "@/db/schema";
+import { requireAdmin, canManageChallenge } from "@/lib/auth";
 import { parseChallenge } from "@/lib/validate";
 
 export const dynamic = "force-dynamic";
@@ -9,18 +9,20 @@ export const dynamic = "force-dynamic";
 type Ctx = { params: { id: string } };
 
 export async function PUT(req: Request, { params }: Ctx) {
-  const deny = await requireAdmin();
-  if (deny) return deny;
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard.error;
 
-  const { id } = params;
-  const existing = await db.select({ id: challenges.id }).from(challenges).where(eq(challenges.id, id)).limit(1);
+  const id = Number(params.id);
+  const existing = await db.select().from(challenges).where(eq(challenges.id, id)).limit(1);
   if (!existing.length) return Response.json({ error: "Not found." }, { status: 404 });
+
+  if (!(await canManageChallenge(guard.admin, id))) {
+    return Response.json({ error: "You don't have access to this challenge." }, { status: 403 });
+  }
 
   const body = await req.json().catch(() => ({}));
   const parsed = parseChallenge(body, false);
-  if (parsed.error || !parsed.value) {
-    return Response.json({ error: parsed.error }, { status: 400 });
-  }
+  if (parsed.error || !parsed.value) return Response.json({ error: parsed.error }, { status: 400 });
   const c = parsed.value;
 
   await db
@@ -43,11 +45,16 @@ export async function PUT(req: Request, { params }: Ctx) {
 }
 
 export async function DELETE(_req: Request, { params }: Ctx) {
-  const deny = await requireAdmin();
-  if (deny) return deny;
+  const guard = await requireAdmin();
+  if ("error" in guard) return guard.error;
 
-  const { id } = params;
+  const id = Number(params.id);
+  if (!(await canManageChallenge(guard.admin, id))) {
+    return Response.json({ error: "You don't have access to this challenge." }, { status: 403 });
+  }
+
   await db.delete(solves).where(eq(solves.challengeId, id));
+  await db.delete(adminChallenges).where(eq(adminChallenges.challengeId, id));
   await db.delete(challenges).where(eq(challenges.id, id));
   return Response.json({ ok: true });
 }

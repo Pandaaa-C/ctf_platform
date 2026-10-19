@@ -4,14 +4,15 @@ import { useRouter } from "next/navigation";
 import ChallengeModal from "./ChallengeModal";
 import type { ChallengesResponse, ChallengeView } from "./types";
 
-export default function Board() {
+export default function Board({ slug }: { slug: string }) {
   const [data, setData] = useState<ChallengesResponse | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "unauth">("loading");
   const [active, setActive] = useState<ChallengeView | null>(null);
   const router = useRouter();
+  const base = `/ctf/${slug}`;
 
   const load = useCallback(async () => {
-    const r = await fetch("/api/challenges", { cache: "no-store" });
+    const r = await fetch(`/api/ctf/${slug}/challenges`, { cache: "no-store" });
     if (r.status === 401) {
       setStatus("unauth");
       return;
@@ -27,15 +28,13 @@ export default function Board() {
       }
       return cur;
     });
-  }, []);
+  }, [slug]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  if (status === "loading") {
-    return <div className="wrap"><p className="empty">Loading challenges…</p></div>;
-  }
+  if (status === "loading") return <div className="wrap"><p className="empty">Loading challenges…</p></div>;
   if (status === "unauth" || !data) {
     return (
       <div className="wrap narrow">
@@ -43,8 +42,8 @@ export default function Board() {
           <h2 style={{ marginTop: 0 }}>Log in to play</h2>
           <p className="sub" style={{ fontSize: 15 }}>Register a team or log in to see the challenges.</p>
           <div className="cta" style={{ justifyContent: "center" }}>
-            <a className="btn" href="/register">Register</a>
-            <a className="btn ghost" href="/login">Log in</a>
+            <a className="btn" href={`${base}/register`}>Register</a>
+            <a className="btn ghost" href={`${base}/login`}>Log in</a>
           </div>
         </div>
       </div>
@@ -64,6 +63,8 @@ export default function Board() {
         <div className="stat"><div className="k">Points available</div><div className="v accent">{data.totalPoints}</div></div>
       </div>
 
+      {cats.length === 0 && <p className="empty">No challenges have been published for this event yet.</p>}
+
       {cats.map(([cat, list]) => (
         <section key={cat}>
           <div className="cat-head">
@@ -74,11 +75,7 @@ export default function Board() {
           <div className="grid">
             {list.map((c) => (
               <button key={c.id} className={`chal ${c.solved ? "solved" : ""}`} onClick={() => setActive(c)}>
-                {c.solved ? (
-                  <span className="tick">✓</span>
-                ) : c.firstBlood ? (
-                  <span className="blood" title={`First blood: ${c.firstBlood}`}>🩸</span>
-                ) : null}
+                {c.solved ? <span className="tick">✓</span> : c.firstBlood ? <span className="blood" title={`First blood: ${c.firstBlood}`}>🩸</span> : null}
                 <div className="title">{c.title}</div>
                 <div className="pts">{c.value}</div>
                 <div className="meta">
@@ -93,6 +90,7 @@ export default function Board() {
 
       {active && (
         <ChallengeModal
+          slug={slug}
           challenge={active}
           onClose={() => setActive(null)}
           onSolved={() => { load(); router.refresh(); }}

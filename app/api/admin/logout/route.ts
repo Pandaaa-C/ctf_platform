@@ -1,6 +1,6 @@
-import { clearAdmin } from "@/lib/auth";
+import { clearAdminSession } from "@/lib/auth";
 
 export async function POST() {
-  await clearAdmin();
+  await clearAdminSession();
   return Response.json({ ok: true });
 }

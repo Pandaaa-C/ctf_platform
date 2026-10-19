@@ -3,15 +3,16 @@ import { useState, useEffect, type FormEvent } from "react";
 import type { AdminChallenge } from "./types";
 
 type Props = {
-  challenge: AdminChallenge | null; // null = new
+  ctfId: number;
+  challenge: AdminChallenge | null;
   onClose: () => void;
   onSaved: () => void;
 };
 
-export default function ChallengeEditor({ challenge, onClose, onSaved }: Props) {
+export default function ChallengeEditor({ ctfId, challenge, onClose, onSaved }: Props) {
   const isNew = !challenge;
   const [form, setForm] = useState({
-    id: challenge?.id || "",
+    slug: challenge?.slug || "",
     title: challenge?.title || "",
     category: challenge?.category || "",
     points: challenge?.points ?? 100,
@@ -42,11 +43,12 @@ export default function ChallengeEditor({ challenge, onClose, onSaved }: Props) 
     setBusy(true);
     const url = isNew ? "/api/admin/challenges" : `/api/admin/challenges/${challenge!.id}`;
     const method = isNew ? "POST" : "PUT";
+    const payload = isNew ? { ...form, ctfId } : form;
     try {
       const r = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       const d = await r.json();
       if (!r.ok) { setError(d.error || "Save failed."); setBusy(false); return; }
@@ -61,21 +63,15 @@ export default function ChallengeEditor({ challenge, onClose, onSaved }: Props) 
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <button className="x" onClick={onClose} aria-label="Close">×</button>
         <h3 style={{ marginTop: 0 }}>{isNew ? "New challenge" : "Edit challenge"}</h3>
-
         {error && <div className="flash wrong">{error}</div>}
-
         <form onSubmit={save}>
           <label>Title</label>
           <input value={form.title} onChange={(e) => set("title", e.target.value)} autoFocus />
 
           <label>Scoring</label>
           <div className="seg">
-            <button type="button" className={form.scoring === "static" ? "on" : ""} onClick={() => set("scoring", "static")}>
-              Static — fixed points
-            </button>
-            <button type="button" className={form.scoring === "dynamic" ? "on" : ""} onClick={() => set("scoring", "dynamic")}>
-              Dynamic — points drop as teams solve
-            </button>
+            <button type="button" className={form.scoring === "static" ? "on" : ""} onClick={() => set("scoring", "static")}>Static — fixed points</button>
+            <button type="button" className={form.scoring === "dynamic" ? "on" : ""} onClick={() => set("scoring", "dynamic")}>Dynamic — points drop as teams solve</button>
           </div>
 
           {form.scoring === "static" ? (
@@ -86,35 +82,19 @@ export default function ChallengeEditor({ challenge, onClose, onSaved }: Props) 
           ) : (
             <>
               <div style={{ display: "flex", gap: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <label>Initial</label>
-                  <input type="number" min="1" value={form.initial} onChange={(e) => set("initial", Number(e.target.value))} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label>Minimum</label>
-                  <input type="number" min="0" value={form.minimum} onChange={(e) => set("minimum", Number(e.target.value))} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label>Decay</label>
-                  <input type="number" min="1" value={form.decay} onChange={(e) => set("decay", Number(e.target.value))} />
-                </div>
+                <div style={{ flex: 1 }}><label>Initial</label><input type="number" min="1" value={form.initial} onChange={(e) => set("initial", Number(e.target.value))} /></div>
+                <div style={{ flex: 1 }}><label>Minimum</label><input type="number" min="0" value={form.minimum} onChange={(e) => set("minimum", Number(e.target.value))} /></div>
+                <div style={{ flex: 1 }}><label>Decay</label><input type="number" min="1" value={form.decay} onChange={(e) => set("decay", Number(e.target.value))} /></div>
               </div>
               <p className="sub" style={{ fontSize: 12.5, margin: "4px 0 0" }}>
-                Worth <b>{form.initial}</b> at first, falling to <b>{form.minimum}</b> by
-                about <b>{form.decay}</b> solves. Every solver is worth the current value.
+                Worth <b>{form.initial}</b> at first, falling to <b>{form.minimum}</b> by about <b>{form.decay}</b> solves.
               </p>
             </>
           )}
 
           <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
-            <div style={{ flex: 1 }}>
-              <label>Category</label>
-              <input value={form.category} onChange={(e) => set("category", e.target.value)} placeholder="Web, Crypto, …" />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label>ID {isNew ? "(optional — from title)" : "(fixed)"}</label>
-              <input className="mono" value={form.id} disabled={!isNew} onChange={(e) => set("id", e.target.value)} placeholder="auto" />
-            </div>
+            <div style={{ flex: 1 }}><label>Category</label><input value={form.category} onChange={(e) => set("category", e.target.value)} placeholder="Web, Crypto, …" /></div>
+            <div style={{ flex: 1 }}><label>Slug {isNew ? "(optional — from title)" : "(fixed)"}</label><input className="mono" value={form.slug} disabled={!isNew} onChange={(e) => set("slug", e.target.value)} placeholder="auto" /></div>
           </div>
 
           <label>Flag</label>
