@@ -49,7 +49,7 @@ export default function AuthForm({ slug, mode }: { slug: string; mode: "register
           <label htmlFor="pw">Password</label>
           <input id="pw" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="off" />
           <button className="btn block" style={{ marginTop: 22 }} disabled={busy}>
-            {busy ? "Please wait…" : isRegister ? "Create team" : "Log in"}
+            {busy ? "Please wait..." : isRegister ? "Create team" : "Log in"}
           </button>
         </form>
       </div>

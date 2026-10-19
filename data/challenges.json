@@ -23,7 +23,7 @@
       "decay": 15,
       "flag": "FLAG{points_go_down_as_teams_solve}",
       "description": "An example of a dynamic challenge: it's worth a lot now and drops toward its minimum as more teams solve it.\n\nThe flag is: FLAG{points_go_down_as_teams_solve}",
-      "hints": ["Also written in the description — this entry just shows the format."]
+      "hints": ["Also written in the description - this entry just shows the format."]
     }
   ]
 }

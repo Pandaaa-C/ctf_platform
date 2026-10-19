@@ -26,7 +26,7 @@ export default function Admin() {
     router.refresh();
   }
 
-  if (!loaded) return <div className="wrap"><p className="empty">Loading…</p></div>;
+  if (!loaded) return <div className="wrap"><p className="empty">Loading...</p></div>;
   if (!me) {
     return (
       <div className="wrap narrow">
@@ -84,7 +84,7 @@ function CtfSelector({ value, onChange }: { value: number | null; onChange: (id:
       if (value === null && list.length) onChange(list[0].id, list[0].slug);
     });
   }, []);
-  if (!ctfs.length) return <p className="sub" style={{ fontSize: 14 }}>No CTFs yet — create one in the CTFs tab.</p>;
+  if (!ctfs.length) return <p className="sub" style={{ fontSize: 14 }}>No CTFs yet - create one in the CTFs tab.</p>;
   return (
     <select
       className="select"
@@ -133,7 +133,7 @@ function CtfsTab() {
     setMsg(`Deleted "${c.name}".`); load();
   }
 
-  if (!ctfs) return <p className="empty">Loading…</p>;
+  if (!ctfs) return <p className="empty">Loading...</p>;
 
   return (
     <div>
@@ -222,7 +222,7 @@ function ChallengesTab({ full }: { full: boolean }) {
         {full && ctfId !== null && <button className="btn" style={{ marginLeft: "auto" }} onClick={() => setEditing("new")}>+ New challenge</button>}
       </div>
 
-      {list === null ? <p className="empty">Loading…</p> : list.length === 0 ? (
+      {list === null ? <p className="empty">Loading...</p> : list.length === 0 ? (
         <p className="empty">{full ? "No challenges in this event yet." : "You haven't been assigned any challenges in this event."}</p>
       ) : (
         Object.entries(byCat).map(([cat, cs]) => (
@@ -315,7 +315,7 @@ function TeamsTab() {
         <CtfSelector value={ctfId} onChange={(id) => setCtfId(id)} />
       </div>
       <div className="panel" style={{ padding: 0, overflow: "hidden" }}>
-        {teams === null ? <p className="empty">Loading…</p> : teams.length === 0 ? <p className="empty">No teams registered yet.</p> : (
+        {teams === null ? <p className="empty">Loading...</p> : teams.length === 0 ? <p className="empty">No teams registered yet.</p> : (
           <table className="board">
             <thead><tr><th>Team</th><th className="sv">Solved</th><th style={{ textAlign: "right" }}>Score</th><th></th></tr></thead>
             <tbody>
@@ -358,7 +358,7 @@ function OrganisersTab() {
     setMsg(`Deleted "${o.username}".`); load();
   }
 
-  if (!organisers) return <p className="empty">Loading…</p>;
+  if (!organisers) return <p className="empty">Loading...</p>;
 
   return (
     <div>

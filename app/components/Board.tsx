@@ -34,7 +34,7 @@ export default function Board({ slug }: { slug: string }) {
     load();
   }, [load]);
 
-  if (status === "loading") return <div className="wrap"><p className="empty">Loading challenges…</p></div>;
+  if (status === "loading") return <div className="wrap"><p className="empty">Loading challenges...</p></div>;
   if (status === "unauth" || !data) {
     return (
       <div className="wrap narrow">
