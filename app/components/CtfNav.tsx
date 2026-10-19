@@ -9,8 +9,11 @@ function initials(name: string): string {
   return (words[0][0] + words[1][0]).toUpperCase();
 }
 
+type PageLink = { slug: string; title: string };
+
 export default function CtfNav({ slug, name }: { slug: string; name: string }) {
   const [team, setTeam] = useState<{ name: string } | null>(null);
+  const [pages, setPages] = useState<PageLink[]>([]);
   const [loaded, setLoaded] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
@@ -21,6 +24,7 @@ export default function CtfNav({ slug, name }: { slug: string; name: string }) {
       const r = await fetch(`/api/ctf/${slug}/me`, { cache: "no-store" });
       const d = await r.json();
       setTeam(d.team);
+      setPages(Array.isArray(d.pages) ? d.pages : []);
     } catch {
       setTeam(null);
     } finally {
@@ -52,6 +56,7 @@ export default function CtfNav({ slug, name }: { slug: string; name: string }) {
       <div className="links">
         {link(`${base}/challenges`, "Challenges")}
         {link(`${base}/scoreboard`, "Scoreboard")}
+        {pages.map((p) => link(`${base}/p/${p.slug}`, p.title))}
       </div>
       <div className="right">
         <a href="/" className="dim-link">All events</a>

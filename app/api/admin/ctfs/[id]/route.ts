@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { ctfs, challenges, teams, solves } from "@/db/schema";
+import { ctfs, challenges, teams, solves, pages } from "@/db/schema";
 import { requireFullAdmin } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +47,7 @@ export async function DELETE(_req: Request, { params }: Ctx) {
   for (const tid of teamIds) await db.delete(solves).where(eq(solves.teamId, tid));
   await db.delete(challenges).where(eq(challenges.ctfId, id));
   await db.delete(teams).where(eq(teams.ctfId, id));
+  await db.delete(pages).where(eq(pages.ctfId, id));
   await db.delete(ctfs).where(eq(ctfs.id, id));
   return Response.json({ ok: true });
 }

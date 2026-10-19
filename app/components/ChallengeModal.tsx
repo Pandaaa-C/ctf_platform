@@ -57,7 +57,7 @@ export default function ChallengeModal({ slug, challenge, onClose, onSolved }: P
         <h3>{challenge.title}</h3>
         <div className="pts-big">
           {challenge.value} pts · {challenge.solves} solve{challenge.solves === 1 ? "" : "s"}
-          {challenge.dynamic && <span className="tag-dyn">DYNAMIC - drops toward {challenge.minimum}</span>}
+          {challenge.dynamic && <span className="tag-dyn">DYNAMIC — drops toward {challenge.minimum}</span>}
         </div>
 
         <div className="desc">{challenge.description}</div>
@@ -87,7 +87,7 @@ export default function ChallengeModal({ slug, challenge, onClose, onSolved }: P
             )}
             <form className="submit-row" onSubmit={submit}>
               <input placeholder="FLAG{...}" value={flag} onChange={(e) => setFlag(e.target.value)} autoFocus />
-              <button className="btn" disabled={busy}>{busy ? "..." : "Submit"}</button>
+              <button className="btn" disabled={busy}>{busy ? "…" : "Submit"}</button>
             </form>
           </>
         )}

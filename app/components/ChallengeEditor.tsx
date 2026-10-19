@@ -70,8 +70,8 @@ export default function ChallengeEditor({ ctfId, challenge, onClose, onSaved }: 
 
           <label>Scoring</label>
           <div className="seg">
-            <button type="button" className={form.scoring === "static" ? "on" : ""} onClick={() => set("scoring", "static")}>Static - fixed points</button>
-            <button type="button" className={form.scoring === "dynamic" ? "on" : ""} onClick={() => set("scoring", "dynamic")}>Dynamic - points drop as teams solve</button>
+            <button type="button" className={form.scoring === "static" ? "on" : ""} onClick={() => set("scoring", "static")}>Static — fixed points</button>
+            <button type="button" className={form.scoring === "dynamic" ? "on" : ""} onClick={() => set("scoring", "dynamic")}>Dynamic — points drop as teams solve</button>
           </div>
 
           {form.scoring === "static" ? (
@@ -93,8 +93,8 @@ export default function ChallengeEditor({ ctfId, challenge, onClose, onSaved }: 
           )}
 
           <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
-            <div style={{ flex: 1 }}><label>Category</label><input value={form.category} onChange={(e) => set("category", e.target.value)} placeholder="Web, Crypto, ..." /></div>
-            <div style={{ flex: 1 }}><label>Slug {isNew ? "(optional - from title)" : "(fixed)"}</label><input className="mono" value={form.slug} disabled={!isNew} onChange={(e) => set("slug", e.target.value)} placeholder="auto" /></div>
+            <div style={{ flex: 1 }}><label>Category</label><input value={form.category} onChange={(e) => set("category", e.target.value)} placeholder="Web, Crypto, …" /></div>
+            <div style={{ flex: 1 }}><label>Slug {isNew ? "(optional — from title)" : "(fixed)"}</label><input className="mono" value={form.slug} disabled={!isNew} onChange={(e) => set("slug", e.target.value)} placeholder="auto" /></div>
           </div>
 
           <label>Flag</label>
@@ -107,7 +107,7 @@ export default function ChallengeEditor({ ctfId, challenge, onClose, onSaved }: 
           <textarea rows={3} value={form.hints} onChange={(e) => set("hints", e.target.value)} placeholder={"First nudge\nStronger nudge"} />
 
           <div className="submit-row" style={{ marginTop: 18 }}>
-            <button className="btn" disabled={busy}>{busy ? "Saving..." : isNew ? "Create" : "Save changes"}</button>
+            <button className="btn" disabled={busy}>{busy ? "Saving…" : isNew ? "Create" : "Save changes"}</button>
             <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
           </div>
         </form>

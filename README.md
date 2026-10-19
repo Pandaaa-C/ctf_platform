@@ -18,15 +18,19 @@ at `/ctf/<slug>` with its own challenges, registration and scoreboard.
   password). The same team name can exist in different events.
 - **Organiser accounts in the database** — not a shared password. Two access
   levels:
-    - **Full admin** — manage every event, challenge, team and organiser.
-    - **Scoped organiser** — can only edit/delete the specific challenges they're
-      assigned; everything else is read-only or hidden.
+  - **Full admin** — manage every event, challenge, team and organiser.
+  - **Scoped organiser** — can only edit/delete the specific challenges they're
+    assigned; everything else is read-only or hidden.
 - **Challenge board** — tiles grouped by category with points, solve counts, a
   solved ✓ and a 🩸 first-blood marker; a submit modal with staged hints.
 - **Static or dynamic scoring** per challenge (fixed points, or CTFd-style decay
   as more teams solve).
 - **Live scoreboard** per event — rankings plus a score-over-time graph, with an
   organiser-controlled freeze.
+- **Markdown pages** — organisers add Rules/Guide/FAQ pages per event, stored in
+  the database and rendered (sanitised) in the event's navigation.
+- **Self-hosted fonts** — Inter + JetBrains Mono are bundled (no external font
+  requests), so typography is identical on every machine and works offline.
 - **Flags never reach the browser** — all checking is server-side.
 
 ## Run it with Docker Compose (recommended)
@@ -232,12 +236,9 @@ New-NetFirewallRule -DisplayName "CTF Platform" -Direction Inbound -Protocol TCP
 **2. Create the database** (in a PowerShell/`psql` session):
 
 ```sql
-CREATE
-DATABASE ctf;
-CREATE
-USER ctf WITH PASSWORD 'A_STRONG_DB_PASSWORD';
-GRANT ALL PRIVILEGES ON DATABASE
-ctf TO ctf;
+CREATE DATABASE ctf;
+CREATE USER ctf WITH PASSWORD 'A_STRONG_DB_PASSWORD';
+GRANT ALL PRIVILEGES ON DATABASE ctf TO ctf;
 ```
 
 **3. Configure and build**
@@ -307,9 +308,12 @@ Sign in with an organiser account. What you see depends on your access level.
 - **CTFs** — create an event (name + tagline → auto-generated `/ctf/<slug>`),
   freeze/unfreeze its scoreboard, or delete it (removes its challenges, teams and
   solves).
-- **Challenges** — pick an event, then add/edit/delete its challenges or bulk **import** a JSON pack. Each challenge is
-  static or dynamic.
+- **Challenges** — pick an event, then add/edit/delete its challenges or bulk
+  **import** a JSON pack. Each challenge is static or dynamic.
 - **Teams** — pick an event; reset a team's solves or delete a team.
+- **Pages** — pick an event, then add Markdown pages (Rules, Guide, FAQ…) with a
+  write/preview editor. Pages are stored in the database and appear in that
+  event's navigation at `/ctf/<slug>/p/<page>`. Markdown is sanitised on render.
 - **Organisers** — add organiser accounts, set each to full or scoped, and for
   scoped ones tick exactly which challenges they may manage. Reset passwords or
   delete accounts.
@@ -348,9 +352,7 @@ A challenge object:
   "points": 100,
   "flag": "FLAG{...}",
   "description": "Decode it.",
-  "hints": [
-    "It's a Caesar cipher."
-  ]
+  "hints": ["It's a Caesar cipher."]
 }
 ```
 
@@ -360,13 +362,13 @@ For a dynamic challenge, set `"scoring": "dynamic"` with `initial`, `minimum` an
 
 ## Configuration
 
-| Env var          | Default         | Purpose                                            |
-|------------------|-----------------|----------------------------------------------------|
-| `DATABASE_URL`   | —               | Postgres connection string — **required**          |
-| `SESSION_SECRET` | dev placeholder | Signs session cookies — **set this**               |
-| `ADMIN_USERNAME` | `admin`         | Username for the seeded first admin                |
-| `ADMIN_PASSWORD` | `changeme`      | Password for the seeded first admin — **set this** |
-| `PORT`           | `3000`          | Port the server listens on                         |
+| Env var | Default | Purpose |
+|---|---|---|
+| `DATABASE_URL` | — | Postgres connection string — **required** |
+| `SESSION_SECRET` | dev placeholder | Signs session cookies — **set this** |
+| `ADMIN_USERNAME` | `admin` | Username for the seeded first admin |
+| `ADMIN_PASSWORD` | `changeme` | Password for the seeded first admin — **set this** |
+| `PORT` | `3000` | Port the server listens on |
 
 ## Project layout
 
@@ -374,16 +376,17 @@ For a dynamic challenge, set `"scoring": "dynamic"` with `initial`, `minimum` an
 ctfd-platform/
 ├─ app/
 │  ├─ page.tsx                landing: lists all CTFs
-│  ├─ ctf/[slug]/             per-event pages (challenges, scoreboard, register, login)
+│  ├─ ctf/[slug]/             per-event pages (challenges, scoreboard, register,
+│  │                          login, p/[page] markdown content)
 │  ├─ admin/                  admin panel + sign in
 │  ├─ components/*.tsx        TopBar, CtfNav, Board, ChallengeModal, Scoreboard,
 │  │                          ScoreGraph, AuthForm, Admin, ChallengeEditor,
-│  │                          OrganiserEditor, AdminLogin, types
+│  │                          OrganiserEditor, PageEditor, AdminLogin, types
 │  └─ api/
 │     ├─ ctfs                 public CTF list
 │     ├─ ctf/[slug]/          register, login, logout, me, challenges, submit, scoreboard
 │     └─ admin/               login, logout, me, ctfs[/id], challenges[/id],
-│                             teams[/id], organisers[/id]
+│                             pages[/id], teams[/id], organisers[/id]
 ├─ db/
 │  ├─ schema.ts               ctfs, admins, admin_challenges, teams, challenges, solves
 │  └─ client.ts               pg Pool + Drizzle instance
@@ -416,7 +419,10 @@ Six tables (`db/schema.ts`), migrated by Drizzle:
 - **teams** — `id, ctf_id, name, pass_hash, created_at` — unique per (ctf, name).
 - **challenges** — `id, ctf_id, slug, title, category, points, description, flag,
   hints, sort_order, scoring, initial, minimum, decay` — unique per (ctf, slug).
-- **solves** — `id, team_id, challenge_id, points, solved_at` — unique per (team, challenge).
+- **pages** — `id, ctf_id, slug, title, body (markdown), sort_order, created_at,
+  updated_at` — unique per (ctf, slug).
+- **solves** — `id, team_id, challenge_id, points, solved_at` — unique per
+  (team, challenge).
 
 Change the schema by editing `db/schema.ts`, then `npm run db:generate` and the
 new migration applies on next startup.

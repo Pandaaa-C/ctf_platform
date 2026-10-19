@@ -57,7 +57,7 @@ export default function OrganiserEditor({ organiser, challenges, onClose, onSave
   }
 
   const byCtf: Record<string, OrganiserChallenge[]> = {};
-  challenges.forEach((c) => (byCtf[c.ctf || "-"] ||= []).push(c));
+  challenges.forEach((c) => (byCtf[c.ctf || "—"] ||= []).push(c));
 
   return (
     <div className="overlay" onClick={onClose}>
@@ -74,8 +74,8 @@ export default function OrganiserEditor({ organiser, challenges, onClose, onSave
 
           <label>Access level</label>
           <div className="seg">
-            <button type="button" className={role === "full" ? "on" : ""} onClick={() => setRole("full")}>Full - everything</button>
-            <button type="button" className={role === "scoped" ? "on" : ""} onClick={() => setRole("scoped")}>Scoped - only chosen challenges</button>
+            <button type="button" className={role === "full" ? "on" : ""} onClick={() => setRole("full")}>Full — everything</button>
+            <button type="button" className={role === "scoped" ? "on" : ""} onClick={() => setRole("scoped")}>Scoped — only chosen challenges</button>
           </div>
 
           {role === "scoped" && (
@@ -102,7 +102,7 @@ export default function OrganiserEditor({ organiser, challenges, onClose, onSave
           )}
 
           <div className="submit-row" style={{ marginTop: 18 }}>
-            <button className="btn" disabled={busy}>{busy ? "Saving..." : isNew ? "Create organiser" : "Save changes"}</button>
+            <button className="btn" disabled={busy}>{busy ? "Saving…" : isNew ? "Create organiser" : "Save changes"}</button>
             <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
           </div>
         </form>

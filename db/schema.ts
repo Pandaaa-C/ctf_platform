@@ -73,6 +73,23 @@ export const challenges = pgTable(
   })
 );
 
+export const pages = pgTable(
+  "pages",
+  {
+    id: serial("id").primaryKey(),
+    ctfId: integer("ctf_id").notNull(),
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull().default(""),
+    sortOrder: integer("sort_order").default(0),
+    createdAt: bigint("created_at", { mode: "number" }).notNull(),
+    updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
+  },
+  (t) => ({
+    uniq: uniqueIndex("pages_ctf_slug_uniq").on(t.ctfId, t.slug),
+  })
+);
+
 export const solves = pgTable(
   "solves",
   {
@@ -87,6 +104,7 @@ export const solves = pgTable(
   })
 );
 
+export type Page = typeof pages.$inferSelect;
 export type Ctf = typeof ctfs.$inferSelect;
 export type Admin = typeof admins.$inferSelect;
 export type Team = typeof teams.$inferSelect;

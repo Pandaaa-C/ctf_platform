@@ -66,5 +66,14 @@ export type AdminCtf = {
   teams: number;
 };
 
+export type AdminPage = {
+  id: number;
+  ctfId: number;
+  slug: string;
+  title: string;
+  body: string;
+  sortOrder: number | null;
+};
+
 export type Organiser = { id: number; username: string; role: string; scope: number[] };
 export type OrganiserChallenge = { id: number; title: string; ctf: string };

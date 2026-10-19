@@ -48,7 +48,7 @@ export default function ScoreGraph({ series }: { series: SeriesLine[] }) {
           {yTicks.map((tk, i) => (
             <g key={i}>
               <line x1={PAD_L} y1={tk.y} x2={W - PAD_R} y2={tk.y} stroke="#243049" strokeWidth="1" />
-              <text x={PAD_L - 8} y={tk.y + 4} textAnchor="end" fontSize="11" fill="#6b7a98" fontFamily="ui-monospace">{tk.v}</text>
+              <text x={PAD_L - 8} y={tk.y + 4} textAnchor="end" fontSize="11" fill="#6b7a98" fontFamily="var(--font-mono)">{tk.v}</text>
             </g>
           ))}
           {lines.map((ln, i) => (

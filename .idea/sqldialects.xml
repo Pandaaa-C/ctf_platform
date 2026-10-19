@@ -2,5 +2,6 @@
 <project version="4">
   <component name="SqlDialectMappings">
     <file url="file://$PROJECT_DIR$/drizzle/0000_hesitant_the_hood.sql" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/drizzle/0001_awesome_lake.sql" dialect="GenericSQL" />
   </component>
 </project>

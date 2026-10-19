@@ -22,7 +22,7 @@ export default function Scoreboard({ slug }: { slug: string }) {
     return () => clearInterval(t);
   }, [slug]);
 
-  if (!data) return <div className="wrap"><p className="empty">Loading scoreboard...</p></div>;
+  if (!data) return <div className="wrap"><p className="empty">Loading scoreboard…</p></div>;
 
   const hasTeams = data.standings.length > 0;
 
@@ -30,12 +30,12 @@ export default function Scoreboard({ slug }: { slug: string }) {
     <div className="wrap">
       <h1>Scoreboard</h1>
       <p className="sub" style={{ fontSize: 15 }}>
-        {data.frozen ? "Standings are frozen." : "Live standings - refreshes automatically."}
+        {data.frozen ? "Standings are frozen." : "Live standings — refreshes automatically."}
       </p>
 
       {data.frozen && (
         <div className="freeze-banner">
-          ❄️ The scoreboard is frozen - new solves won&apos;t show here until the organisers reveal the results.
+          ❄️ The scoreboard is frozen — new solves won&apos;t show here until the organisers reveal the results.
         </div>
       )}
 

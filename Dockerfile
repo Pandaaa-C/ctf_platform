@@ -1,3 +1,7 @@
+# ─────────────────────────────────────────────────────────────────────
+#  CTF Platform — Dockerfile (Next.js + Postgres/Drizzle, TypeScript)
+# ─────────────────────────────────────────────────────────────────────
+
 # ---- deps ----
 FROM node:20-bookworm-slim AS deps
 WORKDIR /app
@@ -10,6 +14,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# DATABASE_URL isn't needed to build; a placeholder keeps config happy.
 ENV DATABASE_URL=postgres://postgres@localhost:5432/ctf
 RUN npm run build
 
@@ -31,6 +36,9 @@ COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/scripts/migrate.mjs ./scripts/migrate.mjs
 COPY --from=builder /app/scripts/seed.mjs ./scripts/seed.mjs
 COPY --from=builder /app/scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
+# the migrate script (scripts/migrate.mjs) runs OUTSIDE Next's traced bundle,
+# so it needs the FULL drizzle-orm + pg packages. Copy them from the deps stage
+# (untrimmed), not from the builder's traced standalone output.
 COPY --from=deps /app/node_modules/pg ./node_modules/pg
 COPY --from=deps /app/node_modules/pg-pool ./node_modules/pg-pool
 COPY --from=deps /app/node_modules/pg-protocol ./node_modules/pg-protocol

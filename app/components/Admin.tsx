@@ -3,7 +3,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import ChallengeEditor from "./ChallengeEditor";
 import OrganiserEditor from "./OrganiserEditor";
-import type { AdminChallenge, AdminTeam, AdminCtf, Organiser, OrganiserChallenge } from "./types";
+import PageEditor from "./PageEditor";
+import type { AdminChallenge, AdminTeam, AdminCtf, Organiser, OrganiserChallenge, AdminPage } from "./types";
 
 type Me = { username: string; role: string } | null;
 
@@ -26,7 +27,7 @@ export default function Admin() {
     router.refresh();
   }
 
-  if (!loaded) return <div className="wrap"><p className="empty">Loading...</p></div>;
+  if (!loaded) return <div className="wrap"><p className="empty">Loading…</p></div>;
   if (!me) {
     return (
       <div className="wrap narrow">
@@ -41,7 +42,7 @@ export default function Admin() {
 
   const full = me.role === "full";
   const tabs: [string, string][] = full
-    ? [["ctfs", "CTFs"], ["challenges", "Challenges"], ["teams", "Teams"], ["organisers", "Organisers"]]
+    ? [["ctfs", "CTFs"], ["challenges", "Challenges"], ["pages", "Pages"], ["teams", "Teams"], ["organisers", "Organisers"]]
     : [["challenges", "My challenges"]];
   const activeTab = tabs.some(([k]) => k === tab) ? tab : tabs[0][0];
 
@@ -68,6 +69,7 @@ export default function Admin() {
 
         {activeTab === "ctfs" && full && <CtfsTab />}
         {activeTab === "challenges" && <ChallengesTab full={full} />}
+        {activeTab === "pages" && full && <PagesTab />}
         {activeTab === "teams" && full && <TeamsTab />}
         {activeTab === "organisers" && full && <OrganisersTab />}
       </div>
@@ -84,7 +86,7 @@ function CtfSelector({ value, onChange }: { value: number | null; onChange: (id:
       if (value === null && list.length) onChange(list[0].id, list[0].slug);
     });
   }, []);
-  if (!ctfs.length) return <p className="sub" style={{ fontSize: 14 }}>No CTFs yet - create one in the CTFs tab.</p>;
+  if (!ctfs.length) return <p className="sub" style={{ fontSize: 14 }}>No CTFs yet — create one in the CTFs tab.</p>;
   return (
     <select
       className="select"
@@ -133,7 +135,7 @@ function CtfsTab() {
     setMsg(`Deleted "${c.name}".`); load();
   }
 
-  if (!ctfs) return <p className="empty">Loading...</p>;
+  if (!ctfs) return <p className="empty">Loading…</p>;
 
   return (
     <div>
@@ -222,7 +224,7 @@ function ChallengesTab({ full }: { full: boolean }) {
         {full && ctfId !== null && <button className="btn" style={{ marginLeft: "auto" }} onClick={() => setEditing("new")}>+ New challenge</button>}
       </div>
 
-      {list === null ? <p className="empty">Loading...</p> : list.length === 0 ? (
+      {list === null ? <p className="empty">Loading…</p> : list.length === 0 ? (
         <p className="empty">{full ? "No challenges in this event yet." : "You haven't been assigned any challenges in this event."}</p>
       ) : (
         Object.entries(byCat).map(([cat, cs]) => (
@@ -315,7 +317,7 @@ function TeamsTab() {
         <CtfSelector value={ctfId} onChange={(id) => setCtfId(id)} />
       </div>
       <div className="panel" style={{ padding: 0, overflow: "hidden" }}>
-        {teams === null ? <p className="empty">Loading...</p> : teams.length === 0 ? <p className="empty">No teams registered yet.</p> : (
+        {teams === null ? <p className="empty">Loading…</p> : teams.length === 0 ? <p className="empty">No teams registered yet.</p> : (
           <table className="board">
             <thead><tr><th>Team</th><th className="sv">Solved</th><th style={{ textAlign: "right" }}>Score</th><th></th></tr></thead>
             <tbody>
@@ -334,6 +336,73 @@ function TeamsTab() {
           </table>
         )}
       </div>
+    </div>
+  );
+}
+
+function PagesTab() {
+  const [ctfId, setCtfId] = useState<number | null>(null);
+  const [slug, setSlug] = useState<string>("");
+  const [list, setList] = useState<AdminPage[] | null>(null);
+  const [editing, setEditing] = useState<AdminPage | "new" | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const load = useCallback(async (id: number | null) => {
+    if (id === null) { setList([]); return; }
+    const d = await fetch(`/api/admin/pages?ctf=${id}`, { cache: "no-store" }).then((r) => r.json());
+    setList(d.pages || []);
+  }, []);
+  useEffect(() => { if (ctfId !== null) load(ctfId); }, [ctfId, load]);
+
+  async function remove(p: AdminPage) {
+    if (!confirm(`Delete the page "${p.title}"?`)) return;
+    await fetch(`/api/admin/pages/${p.id}`, { method: "DELETE" });
+    setMsg(`Deleted "${p.title}".`); load(ctfId);
+  }
+
+  return (
+    <div>
+      {msg && <div className="flash info">{msg}</div>}
+      <p className="sub" style={{ fontSize: 14, marginTop: 0 }}>
+        Add Markdown pages (Rules, Guide, FAQ…) to an event. They appear in that
+        event&apos;s navigation for players.
+      </p>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "6px 0 14px", flexWrap: "wrap" }}>
+        <span className="sub" style={{ fontSize: 14 }}>Event:</span>
+        <CtfSelector value={ctfId} onChange={(id, s) => { setCtfId(id); setSlug(s); }} />
+        {ctfId !== null && <button className="btn" style={{ marginLeft: "auto" }} onClick={() => setEditing("new")}>+ New page</button>}
+      </div>
+
+      <div className="panel" style={{ padding: 0, overflow: "hidden" }}>
+        {list === null ? <p className="empty">Loading…</p> : list.length === 0 ? (
+          <p className="empty">No pages yet for this event.</p>
+        ) : (
+          <table className="board">
+            <thead><tr><th>Title</th><th>URL</th><th></th></tr></thead>
+            <tbody>
+              {list.map((p) => (
+                <tr key={p.id}>
+                  <td>{p.title}</td>
+                  <td className="mono" style={{ fontSize: 12 }}><a href={`/ctf/${slug}/p/${p.slug}`} target="_blank">/ctf/{slug}/p/{p.slug}</a></td>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                    <button className="btn ghost" style={{ padding: "6px 11px", fontSize: 13 }} onClick={() => setEditing(p)}>Edit</button>
+                    <button className="btn ghost danger" style={{ padding: "6px 11px", fontSize: 13, marginLeft: 6 }} onClick={() => remove(p)}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {editing && ctfId !== null && (
+        <PageEditor
+          ctfId={ctfId}
+          page={editing === "new" ? null : editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => { setEditing(null); setMsg("Saved."); load(ctfId); }}
+        />
+      )}
     </div>
   );
 }
@@ -358,7 +427,7 @@ function OrganisersTab() {
     setMsg(`Deleted "${o.username}".`); load();
   }
 
-  if (!organisers) return <p className="empty">Loading...</p>;
+  if (!organisers) return <p className="empty">Loading…</p>;
 
   return (
     <div>
